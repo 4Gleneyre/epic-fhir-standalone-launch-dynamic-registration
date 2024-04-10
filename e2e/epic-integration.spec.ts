@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test("Epic OAuth2 Login Flow with Dynamic Registration Works", async ({
   page,
 }) => {
-  await page.goto("http://localhost:5173/");
+  await page.goto("http://localhost:3000/");
 
   // Before we log in, there should be no dynamic client data
   await page.waitForSelector(
@@ -53,7 +53,7 @@ for (const timeOption of expirationOptions) {
   test(`Epic OAuth2 Login Flow with Dynamic Registration Works with '${timeOption}' Expiration Option Selected`, async ({
     page,
   }) => {
-    await page.goto("http://localhost:5173/");
+    await page.goto("http://localhost:3000/");
 
     // Before we log in, there should be no dynamic client data
     await page.waitForSelector(

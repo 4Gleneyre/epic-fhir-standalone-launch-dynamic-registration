@@ -25,7 +25,7 @@ export function getOAuth2State() {
 export function getLoginUrl(): string & Location {
   const params = {
     client_id: `${import.meta.env.VITE_EPIC_CLIENT_ID}`,
-    scope: "openid fhirUser",
+    scope: "patient/*.*",
     redirect_uri: `${import.meta.env.VITE_PUBLIC_URL}${AppRoutes.EpicCallback}`,
     state: getOAuth2State(),
     aud: getDSTU2Url(),

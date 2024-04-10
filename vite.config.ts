@@ -3,6 +3,9 @@ import react from "@vitejs/plugin-react-swc";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  // base: "/epic-fhir-standalone-launch-dynamic-registration/",
+  server: {
+    port: 3000,
+  },
+  base: "/",
   plugins: [react()],
 });
