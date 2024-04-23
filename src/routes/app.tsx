@@ -2,19 +2,12 @@ import { BundleEntry, Condition, OperationOutcome } from "fhir/r2";
 import { useEffect, useState } from "react";
 import {
   EpicAuthResponse,
-  EpicDynamicRegistrationResponse,
-  fetchAccessTokenUsingJWT,
-  getLoginUrl,
   getFHIRResource,
+  getLoginUrl,
 } from "../services/epic";
-import {
-  getLastConnection,
-  getLastDynamicRegistration,
-  storeConnection,
-} from "../services/epic-connection-store";
+import { getLastConnection, storeConnection } from "../services/epic-connection-store";
 
 export default function App() {
-  const [dr, setDr] = useState<EpicDynamicRegistrationResponse | undefined>();
   const [con, setCon] = useState<
     (EpicAuthResponse & { expires_at: number }) | undefined
   >();
@@ -24,9 +17,6 @@ export default function App() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    getLastDynamicRegistration().then((dr) => {
-      setDr(dr);
-    });
     getLastConnection().then((con) => {
       setCon(con);
     });
@@ -45,7 +35,7 @@ export default function App() {
   return (
     <div>
       <header>
-        <h1>Epic FHIR Dynamic Registration Demo</h1>
+        <h1>Epic FHIR Demo</h1>
       </header>
       <main>
         <a href={getLoginUrl()}>
@@ -60,20 +50,6 @@ export default function App() {
             password: <code>epicepic1</code>
           </p>
         </section>
-        {dr ? (
-          <article>
-            <h2>Dynamic Client Registration Data</h2>
-            <p>{`Dynamic Client ID: ${dr.client_id}`}</p>
-            <details>
-              <summary>Raw Response Data</summary>
-              <pre>{JSON.stringify(dr, null, 2)}</pre>
-            </details>
-          </article>
-        ) : (
-          <article>
-            After you log in, your dynamic client data will show here
-          </article>
-        )}
         {con ? (
           <article>
             <h2>Connection Data</h2>
@@ -82,29 +58,6 @@ export default function App() {
                 ? `Token expires in: ${expiresAt} seconds`
                 : "Token Expired"}
             </p>
-            <button
-              disabled={isRefreshing}
-              onClick={async () => {
-                try {
-                  if (dr) {
-                    setIsRefreshing(true);
-                    const accessToken = await fetchAccessTokenUsingJWT(dr);
-                    const nowInSeconds = Math.floor(Date.now() / 1000);
-                    const newCon = {
-                      ...accessToken,
-                      expires_at: nowInSeconds + accessToken.expires_in,
-                    };
-                    await storeConnection(newCon);
-                    setCon(newCon);
-                    setIsRefreshing(false);
-                  }
-                } catch (e) {
-                  setIsRefreshing(false);
-                }
-              }}
-            >
-              {isRefreshing ? "Refreshing" : "Refresh Token"}
-            </button>
             <details>
               <summary>Raw Response Data</summary>
               <pre>{JSON.stringify(con, null, 2)}</pre>
@@ -122,15 +75,13 @@ export default function App() {
               disabled={isRefreshing}
               onClick={async () => {
                 try {
-                  if (dr) {
-                    setIsRefreshing(true);
-                    setPatientData(
-                      await getFHIRResource(con.access_token, "Condition", {
-                        patient: con.patient,
-                      })
-                    );
-                    setIsRefreshing(false);
-                  }
+                  setIsRefreshing(true);
+                  setPatientData(
+                    await getFHIRResource(con.access_token, "Condition", {
+                      patient: con.patient,
+                    })
+                  );
+                  setIsRefreshing(false);
                 } catch (e) {
                   setIsRefreshing(false);
                 }

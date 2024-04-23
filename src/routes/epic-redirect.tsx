@@ -43,33 +43,23 @@ export default function EpicRedirect() {
       } else {
         // With the code, fetch the initial access token. This access token is short-lived and will be used to register this web app as a dynamic client.
         fetchAccessTokenWithCode(code)
-          .then(async (res) => {
-            setStatus1(Status.Success);
-            return registerDynamicClient(res);
-          })
-          .then(async (res) => {
-            console.debug(res);
-            await storeDynamicRegistrationMetadata(res);
-            setStatus2(Status.Success);
-            return fetchAccessTokenUsingJWT(res);
-          })
-          .then(async (res) => {
-            console.debug(res);
-            const nowInSeconds = Math.floor(Date.now() / 1000);
-            await storeConnection({
-              ...res,
-              expires_at: nowInSeconds + res.expires_in,
-            });
-            setMsg("Successfully logged in! Redirecting...");
-            setStatus3(Status.Success);
-            setTimeout(() => {
-              navigate(AppRoutes.Home);
-            }, 100);
-          })
-          .catch((e) => {
-            setIsError(true);
-            setMsg(`${e.message}`);
+        .then(async (res) => {
+          console.debug(res);
+          const nowInSeconds = Math.floor(Date.now() / 1000);
+          await storeConnection({
+            ...res,
+            expires_at: nowInSeconds + res.expires_in,
           });
+          setMsg("Successfully logged in! Redirecting...");
+          setStatus1(Status.Success);
+          setTimeout(() => {
+            navigate(AppRoutes.Home);
+          }, 100);
+        })
+        .catch((e) => {
+          setIsError(true);
+          setMsg(`${e.message}`);
+        });
       }
     } else {
       setStatus1(Status.Error);

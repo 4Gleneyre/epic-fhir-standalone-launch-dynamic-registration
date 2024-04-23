@@ -25,7 +25,7 @@ export function getOAuth2State() {
 export function getLoginUrl(): string & Location {
   const params = {
     client_id: `${import.meta.env.VITE_EPIC_CLIENT_ID}`,
-    scope: "openid fhirUser",
+    scope: 'openid fhirUser profile offline_access launch launch/patient patient/*.* user/*.*',
     redirect_uri: `${import.meta.env.VITE_PUBLIC_URL}${AppRoutes.EpicCallback}`,
     state: getOAuth2State(),
     aud: getDSTU2Url(),
@@ -65,83 +65,85 @@ export async function fetchAccessTokenWithCode(
       `Error getting access token: API returned a ${res.status} with data ${text}`
     );
   }
-  return res.json();
+  const response: EpicAuthResponse = await res.json();
+  console.log("Access Token:", response.access_token);
+  return response;
 }
 
-/**
- * Using the access token, register this app as a dynamic client with Epic by providing a public key
- * @param res The response from the access token request
- * @returns A promise that resolves to the JSON response from the Epic dynamic client registration
- */
-export async function registerDynamicClient(
-  res: EpicAuthResponse
-): Promise<EpicDynamicRegistrationResponse> {
-  const jsonWebKeySet = await getPublicKey();
-  const validJWKS = jsonWebKeySet as JsonWebKeyWKid;
-  const request: EpicDynamicRegistrationRequest = {
-    software_id: `${import.meta.env.VITE_EPIC_CLIENT_ID}`,
-    jwks: {
-      keys: [
-        {
-          e: validJWKS.e,
-          kty: validJWKS.kty,
-          n: validJWKS.n,
-          kid: `${IDBKeyConfig.KEY_ID}`,
-        },
-      ],
-    },
-  };
-  // We've got a temp access token and public key, now we can register this app as a dynamic client
-  const registerRes = await fetch(`${baseUrl}/oauth2/register`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${res.access_token}`,
-    },
-    body: JSON.stringify(request),
-  });
-  if (!registerRes.ok) {
-    const text = await registerRes.text();
-    throw new Error(
-      `Error registering dynamic client: API returned a ${registerRes.status} with data ${text}`
-    );
-  }
-  return await registerRes.json();
-}
+// /**
+//  * Using the access token, register this app as a dynamic client with Epic by providing a public key
+//  * @param res The response from the access token request
+//  * @returns A promise that resolves to the JSON response from the Epic dynamic client registration
+//  */
+// export async function registerDynamicClient(
+//   res: EpicAuthResponse
+// ): Promise<EpicDynamicRegistrationResponse> {
+//   const jsonWebKeySet = await getPublicKey();
+//   const validJWKS = jsonWebKeySet as JsonWebKeyWKid;
+//   const request: EpicDynamicRegistrationRequest = {
+//     software_id: `${import.meta.env.VITE_EPIC_CLIENT_ID}`,
+//     jwks: {
+//       keys: [
+//         {
+//           e: validJWKS.e,
+//           kty: validJWKS.kty,
+//           n: validJWKS.n,
+//           kid: `${IDBKeyConfig.KEY_ID}`,
+//         },
+//       ],
+//     },
+//   };
+//   // We've got a temp access token and public key, now we can register this app as a dynamic client
+//   const registerRes = await fetch(`${baseUrl}/oauth2/register`, {
+//     method: "POST",
+//     headers: {
+//       "Content-Type": "application/json",
+//       Authorization: `Bearer ${res.access_token}`,
+//     },
+//     body: JSON.stringify(request),
+//   });
+//   if (!registerRes.ok) {
+//     const text = await registerRes.text();
+//     throw new Error(
+//       `Error registering dynamic client: API returned a ${registerRes.status} with data ${text}`
+//     );
+//   }
+//   return await registerRes.json();
+// }
 
 /**
  * Fetches an access token using a JWT that we generate and sign with the private key we used when registering as a dynamic client
  * @param res The JSON response from the dynamic client registration
  * @returns A promise that resolves to the JSON response from the Epic JWT access token request
  */
-export async function fetchAccessTokenUsingJWT(
-  res: EpicDynamicRegistrationResponse
-): Promise<EpicAuthResponse> {
-  // We've registered, now we can get another access token with our signed JWT
-  const jwtBody = {
-    sub: res.client_id,
-    iss: res.client_id,
-    aud: `${baseUrl}/oauth2/token`,
-    jti: uuidv4(),
-  };
-  const signedJwt = await signJwt(jwtBody);
-  const tokenRes = await fetch(`${baseUrl}/oauth2/token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      client_id: res.client_id,
-      assertion: signedJwt,
-    }),
-  });
-  if (!tokenRes.ok) {
-    const text = await tokenRes.text();
-    throw new Error(`Error getting access token with JWT: ${text}`);
-  }
-  return await tokenRes.json();
-}
+// export async function fetchAccessTokenUsingJWT(
+//   res: EpicDynamicRegistrationResponse
+// ): Promise<EpicAuthResponse> {
+//   // We've registered, now we can get another access token with our signed JWT
+//   const jwtBody = {
+//     sub: res.client_id,
+//     iss: res.client_id,
+//     aud: `${baseUrl}/oauth2/token`,
+//     jti: uuidv4(),
+//   };
+//   const signedJwt = await signJwt(jwtBody);
+//   const tokenRes = await fetch(`${baseUrl}/oauth2/token`, {
+//     method: "POST",
+//     headers: {
+//       "Content-Type": "application/x-www-form-urlencoded",
+//     },
+//     body: new URLSearchParams({
+//       grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+//       client_id: res.client_id,
+//       assertion: signedJwt,
+//     }),
+//   });
+//   if (!tokenRes.ok) {
+//     const text = await tokenRes.text();
+//     throw new Error(`Error getting access token with JWT: ${text}`);
+//   }
+//   return await tokenRes.json();
+// }
 
 export async function getFHIRResource<T extends FhirResource>(
   accessToken: string,
